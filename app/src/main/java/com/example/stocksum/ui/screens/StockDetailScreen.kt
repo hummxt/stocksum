@@ -21,6 +21,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarOutline
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -260,21 +268,21 @@ fun StockDetailScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ActionButton(
-                    icon = "🔔",
+                    icon = Icons.Rounded.Notifications,
                     label = "Alert",
                     onClick = { showAlertDialog = true },
                     bgColor = colors.accentBg,
                     iconColor = colors.accent
                 )
                 ActionButton(
-                    icon = if (isInPortfolio) "✓" else "📂",
+                    icon = if (isInPortfolio) Icons.Rounded.Check else Icons.Rounded.Folder,
                     label = if (isInPortfolio) "Edit" else "Portfolio",
                     onClick = { showPortfolioDialog = true },
                     bgColor = if (isInPortfolio) colors.gainBg else colors.bgCard,
                     iconColor = if (isInPortfolio) colors.gain else colors.textPrimary
                 )
                 ActionButton(
-                    icon = "🔗",
+                    icon = Icons.Rounded.Share,
                     label = "Share",
                     onClick = {
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -290,7 +298,7 @@ fun StockDetailScreen(
                     bgColor = colors.bgCard
                 )
                 ActionButton(
-                    icon = if (watchlisted) "★" else "☆",
+                    icon = if (watchlisted) Icons.Rounded.Star else Icons.Rounded.StarOutline,
                     label = if (watchlisted) "Saved" else "Watch",
                     onClick = { viewModel.toggleWatchlist(ticker) },
                     bgColor = if (watchlisted) colors.neutralBg else colors.bgCard,

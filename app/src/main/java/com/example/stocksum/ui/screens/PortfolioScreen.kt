@@ -18,6 +18,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -129,9 +133,11 @@ fun PortfolioScreen(
                             .background(colors.accentBg),
                         contentAlignment = Alignment.Center
                     ) {
-                        BasicText(
-                            text = "📂",
-                            style = typography.headline.copy(color = colors.accent)
+                        Icon(
+                            imageVector = Icons.Rounded.Folder,
+                            contentDescription = "Portfolio",
+                            tint = colors.accent,
+                            modifier = Modifier.size(32.dp)
                         )
                     }
                     BasicText(
@@ -288,9 +294,11 @@ fun PortfolioScreen(
                                     .clickable { viewModel.removeFromPortfolio(stock.ticker) },
                                 contentAlignment = Alignment.Center
                             ) {
-                                BasicText(
-                                    text = "✕",
-                                    style = typography.label.copy(color = colors.loss)
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Remove",
+                                    tint = colors.loss,
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
