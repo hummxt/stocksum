@@ -56,6 +56,14 @@ fun HomeScreen(
     val oldTotalValue = totalValue - todayChangeAmount
     val todayPercent = if (oldTotalValue > 0) (todayChangeAmount / oldTotalValue) * 100 else 0.0
 
+    val stocks = (stocksState as? UiState.Success<List<com.example.stocksum.ui.MockStock>>)?.data ?: emptyList()
+    val marketMoodValue = if (portfolioStocks.isNotEmpty()) {
+        ((50 + todayPercent * 2).coerceIn(0.0, 100.0)).toInt()
+    } else {
+        val averageChange = if (stocks.isNotEmpty()) stocks.sumOf { it.changePercent } / stocks.size else 0.0
+        ((50 + averageChange * 2).coerceIn(0.0, 100.0)).toInt()
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -156,7 +164,7 @@ fun HomeScreen(
 
                 item {
                     MarketMoodBar(
-                        value = MockData.moodValue,
+                        value = marketMoodValue,
                         modifier = Modifier
                             .padding(horizontal = Spacing.screenHorizontal)
                             .padding(top = Spacing.lg)
