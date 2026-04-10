@@ -1,5 +1,8 @@
 package com.example.stocksum.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,14 +67,17 @@ fun BottomNavBar(
         ) {
             NavTab.entries.forEach { tab ->
                 val isSelected = tab == selectedTab
-                val iconColor = if (isSelected) colors.gain else colors.textSecondary
-                val labelColor = if (isSelected) colors.gain else colors.textSecondary
+                val targetColor = if (isSelected) colors.gain else colors.textSecondary
+                val iconColor by animateColorAsState(targetColor)
+                val labelColor by animateColorAsState(targetColor)
+                val indicatorWidth by animateDpAsState(if (isSelected) 20.dp else 0.dp)
 
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { onTabSelected(tab) }
-                        .padding(vertical = Spacing.xs),
+                        .padding(vertical = Spacing.xs)
+                        .animateContentSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -105,7 +112,7 @@ fun BottomNavBar(
                         Box(
                             modifier = Modifier
                                 .padding(top = 2.dp)
-                                .width(20.dp)
+                                .width(indicatorWidth)
                                 .height(3.dp)
                                 .clip(RoundedCornerShape(50))
                                 .background(colors.gain)
