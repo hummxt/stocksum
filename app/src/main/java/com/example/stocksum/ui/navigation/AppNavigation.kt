@@ -1,11 +1,14 @@
 package com.example.stocksum.ui.navigation
 
+import android.app.Application
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -36,8 +39,12 @@ fun AppNavigation(
     currentTheme: com.example.stocksum.ui.theme.ThemeMode,
     onThemeChange: (com.example.stocksum.ui.theme.ThemeMode) -> Unit
 ) {
-    val homeViewModel: HomeViewModel = viewModel()
-    
+    val context = LocalContext.current
+    val application = context.applicationContext as Application
+    val homeViewModel: HomeViewModel = viewModel(
+        factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+    )
+
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
@@ -78,11 +85,17 @@ fun AppNavigation(
         }
 
         composable(Screen.Alerts.route) {
-            AlertsScreen()
+            AlertsScreen(
+                viewModel = homeViewModel,
+                onStockClick = { ticker ->
+                    navController.navigate(Screen.StockDetail.createRoute(ticker))
+                }
+            )
         }
 
         composable(Screen.Profile.route) {
             ProfileScreen(
+                viewModel = homeViewModel,
                 currentTheme = currentTheme,
                 onThemeChange = onThemeChange
             )

@@ -26,30 +26,39 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.stocksum.data.MarketReminderWorker
 import com.example.stocksum.ui.components.SectionHeader
 import com.example.stocksum.ui.theme.Radius
 import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
 import com.example.stocksum.ui.theme.ThemeMode
+import com.example.stocksum.ui.viewmodels.HomeViewModel
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun ProfileScreen(
+    viewModel: HomeViewModel,
     currentTheme: ThemeMode = ThemeMode.SYSTEM,
     onThemeChange: (ThemeMode) -> Unit = {}
 ) {
     val colors = StocksumTheme.colors
     val typography = StocksumTheme.typography
+    val context = LocalContext.current
 
     var selectedCurrency by remember { mutableIntStateOf(0) }
-    var selectedMarket by remember { mutableIntStateOf(0) }
     var selectedRefresh by remember { mutableIntStateOf(1) }
-    var alertsEnabled by remember { mutableStateOf(true) }
-    var marketReminders by remember { mutableStateOf(false) }
 
-    val currencies = listOf("USD (\$)", "EUR (€)", "GBP (£)")
-    val markets = listOf("All", "USA", "Crypto")
+    // Load saved notification states from AlertManager
+    var alertsEnabled by remember { mutableStateOf(viewModel.alertManager.areAlertsEnabled()) }
+    var marketReminders by remember { mutableStateOf(viewModel.alertManager.areMarketRemindersEnabled()) }
+
+    val currencies = listOf("USD ($)", "EUR (€)", "GBP (£)")
     val refreshIntervals = listOf("1 min", "5 min", "15 min")
     val themeOptions = listOf("System", "Light", "Dark")
 
@@ -116,13 +125,6 @@ fun ProfileScreen(
                     selectedIndex = selectedCurrency,
                     onSelect = { selectedCurrency = it }
                 )
-                SettingsDivider()
-                SettingsOptionRow(
-                    label = "Default Market",
-                    options = markets,
-                    selectedIndex = selectedMarket,
-                    onSelect = { selectedMarket = it }
-                )
             }
         }
 
@@ -138,13 +140,34 @@ fun ProfileScreen(
                 SettingsToggleRow(
                     label = "Alert Notifications",
                     isEnabled = alertsEnabled,
-                    onToggle = { alertsEnabled = it }
+                    onToggle = { enabled ->
+                        alertsEnabled = enabled
+                        viewModel.alertManager.setAlertsEnabled(enabled)
+                    }
                 )
                 SettingsDivider()
                 SettingsToggleRow(
                     label = "Market Reminders",
                     isEnabled = marketReminders,
-                    onToggle = { marketReminders = it }
+                    onToggle = { enabled ->
+                        marketReminders = enabled
+                        viewModel.alertManager.setMarketRemindersEnabled(enabled)
+
+                        if (enabled) {
+                            // Schedule periodic market reminder worker
+                            val workRequest = PeriodicWorkRequestBuilder<MarketReminderWorker>(
+                                15, TimeUnit.MINUTES
+                            ).build()
+                            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                                "market_reminder",
+                                ExistingPeriodicWorkPolicy.KEEP,
+                                workRequest
+                            )
+                        } else {
+                            // Cancel the worker
+                            WorkManager.getInstance(context).cancelUniqueWork("market_reminder")
+                        }
+                    }
                 )
             }
         }

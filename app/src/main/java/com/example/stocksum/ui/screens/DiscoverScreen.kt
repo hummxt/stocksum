@@ -46,13 +46,11 @@ fun DiscoverScreen(
     val typography = StocksumTheme.typography
 
     var searchQuery by remember { mutableStateOf("") }
-    var selectedMarket by remember { mutableIntStateOf(0) }
     var selectedSection by remember { mutableIntStateOf(0) }
 
     val searchState by viewModel.searchResults.collectAsState()
     val homeStocksState by viewModel.homeStocks.collectAsState()
 
-    val markets = listOf("All", "USA", "Crypto")
     val sections = listOf("Market View", "Gainers", "Losers", "Active")
 
     LazyColumn(
@@ -84,38 +82,10 @@ fun DiscoverScreen(
         }
 
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.screenHorizontal),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                markets.forEachIndexed { index, market ->
-                    val isSelected = index == selectedMarket
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(Radius.sm))
-                            .background(if (isSelected) colors.accentBg else colors.bgCard)
-                            .clickable { selectedMarket = index }
-                            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        BasicText(
-                            text = market,
-                            style = typography.label.copy(
-                                color = if (isSelected) colors.accent else colors.textSecondary
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
             LazyRow(
                 contentPadding = PaddingValues(
                     horizontal = Spacing.screenHorizontal,
-                    vertical = Spacing.lg
+                    vertical = Spacing.sm
                 ),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {

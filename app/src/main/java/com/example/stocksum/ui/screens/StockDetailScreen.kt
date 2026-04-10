@@ -1,5 +1,6 @@
 package com.example.stocksum.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,30 +14,37 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.stocksum.data.AlertCondition
 import com.example.stocksum.ui.MockData
+import com.example.stocksum.ui.components.ActionButton
 import com.example.stocksum.ui.components.PriceBadge
-import com.example.stocksum.ui.components.PrimaryButton
 import com.example.stocksum.ui.components.SectionHeader
 import com.example.stocksum.ui.components.SparklineChart
 import com.example.stocksum.ui.components.tickerToColor
 import com.example.stocksum.ui.theme.Radius
 import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
-import androidx.compose.runtime.collectAsState
 import com.example.stocksum.ui.viewmodels.HomeViewModel
 import com.example.stocksum.ui.viewmodels.UiState
 
@@ -48,19 +56,24 @@ fun StockDetailScreen(
 ) {
     val colors = StocksumTheme.colors
     val typography = StocksumTheme.typography
+    val context = LocalContext.current
 
     val stocksState by viewModel.homeStocks.collectAsState()
     val loadedStocks = (stocksState as? UiState.Success<List<com.example.stocksum.ui.MockStock>>)?.data ?: emptyList()
-    
+
     val searchState by viewModel.searchResults.collectAsState()
     val searchStocks = (searchState as? UiState.Success<List<com.example.stocksum.ui.MockStock>>)?.data ?: emptyList()
-    
-    val stock = loadedStocks.find { it.ticker == ticker } 
+
+    val stock = loadedStocks.find { it.ticker == ticker }
         ?: searchStocks.find { it.ticker == ticker }
-        ?: MockData.allStocks.find { it.ticker == ticker } 
+        ?: MockData.allStocks.find { it.ticker == ticker }
         ?: MockData.allStocks.first()
 
-    val portfolioStock = MockData.portfolioStocks.find { it.ticker == ticker }
+    val portfolioStocks by viewModel.portfolioStocks.collectAsState()
+    val portfolioStock = portfolioStocks.find { it.ticker == ticker }
+    val isInPortfolio = viewModel.isInPortfolio(ticker)
+    val isInWatchlist by viewModel.watchlist.collectAsState()
+    val watchlisted = isInWatchlist.contains(ticker)
 
     var selectedTimeFilter by remember { mutableIntStateOf(0) }
     val timeFilters = listOf("1D", "1W", "1M", "3M", "1Y")
@@ -69,18 +82,65 @@ fun StockDetailScreen(
     val priceColor = if (isPositive) colors.textGain else colors.textLoss
     val lineColor = if (isPositive) colors.gain else colors.loss
 
+    // Dialog states
+    var showAlertDialog by remember { mutableStateOf(false) }
+    var showPortfolioDialog by remember { mutableStateOf(false) }
+
     val chartData = remember(ticker, selectedTimeFilter) {
         val baseData = MockData.sparklineData
         val seed = ticker.hashCode().toLong() + selectedTimeFilter
         val random = java.util.Random(seed)
-        
+
         when (selectedTimeFilter) {
-            0 -> baseData.map { it * (0.98f + random.nextFloat() * 0.04f) } 
-            1 -> baseData.mapIndexed { i, v -> v * (0.95f + (random.nextFloat() * 0.1f)) + (i * 10f) } 
-            2 -> baseData.map { it * (0.9f + random.nextFloat() * 0.2f) } 
-            3 -> baseData.reversed().map { it * (0.85f + random.nextFloat() * 0.3f) } 
-            else -> baseData.map { it * (0.8f + random.nextFloat() * 0.4f) } 
+            0 -> baseData.map { it * (0.98f + random.nextFloat() * 0.04f) }
+            1 -> baseData.mapIndexed { i, v -> v * (0.95f + (random.nextFloat() * 0.1f)) + (i * 10f) }
+            2 -> baseData.map { it * (0.9f + random.nextFloat() * 0.2f) }
+            3 -> baseData.reversed().map { it * (0.85f + random.nextFloat() * 0.3f) }
+            else -> baseData.map { it * (0.8f + random.nextFloat() * 0.4f) }
         }
+    }
+
+    // Alert Dialog
+    if (showAlertDialog) {
+        AlertDialogContent(
+            ticker = ticker,
+            companyName = stock.companyName,
+            currentPrice = stock.currentPrice,
+            currencySymbol = stock.currencySymbol,
+            onDismiss = { showAlertDialog = false },
+            onConfirm = { condition, targetPrice ->
+                viewModel.addAlert(ticker, stock.companyName, condition, targetPrice)
+                showAlertDialog = false
+            }
+        )
+    }
+
+    // Portfolio Dialog
+    if (showPortfolioDialog) {
+        PortfolioDialogContent(
+            ticker = ticker,
+            companyName = stock.companyName,
+            currentPrice = stock.currentPrice,
+            currencySymbol = stock.currencySymbol,
+            isEditing = isInPortfolio,
+            existingShares = portfolioStock?.sharesOwned ?: 0.0,
+            existingPrice = portfolioStock?.purchasePrice ?: stock.currentPrice,
+            onDismiss = { showPortfolioDialog = false },
+            onConfirm = { shares, price ->
+                if (isInPortfolio) {
+                    viewModel.updatePortfolioEntry(ticker, shares, price)
+                } else {
+                    viewModel.addToPortfolio(ticker, stock.companyName, shares, price)
+                }
+                showPortfolioDialog = false
+            },
+            onRemove = if (isInPortfolio) {
+                {
+                    viewModel.removeFromPortfolio(ticker)
+                    showPortfolioDialog = false
+                }
+            } else null
+        )
     }
 
     LazyColumn(
@@ -89,6 +149,7 @@ fun StockDetailScreen(
             .background(colors.bgBase),
         contentPadding = PaddingValues(top = Spacing.xxl, bottom = Spacing.xxl)
     ) {
+        // Header
         item {
             Row(
                 modifier = Modifier
@@ -163,6 +224,7 @@ fun StockDetailScreen(
             }
         }
 
+        // Price
         item {
             Column(
                 modifier = Modifier
@@ -189,11 +251,60 @@ fun StockDetailScreen(
             }
         }
 
+        // Action Buttons Row
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.lg),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ActionButton(
+                    icon = "🔔",
+                    label = "Alert",
+                    onClick = { showAlertDialog = true },
+                    bgColor = colors.accentBg,
+                    iconColor = colors.accent
+                )
+                ActionButton(
+                    icon = if (isInPortfolio) "✓" else "📂",
+                    label = if (isInPortfolio) "Edit" else "Portfolio",
+                    onClick = { showPortfolioDialog = true },
+                    bgColor = if (isInPortfolio) colors.gainBg else colors.bgCard,
+                    iconColor = if (isInPortfolio) colors.gain else colors.textPrimary
+                )
+                ActionButton(
+                    icon = "🔗",
+                    label = "Share",
+                    onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT,
+                                "Check out ${stock.companyName} (${stock.ticker})! " +
+                                "Current price: ${stock.currencySymbol}${"%.2f".format(stock.currentPrice)} " +
+                                "(${if (isPositive) "+" else ""}${"%.2f".format(stock.changePercent)}%)"
+                            )
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share ${stock.ticker}"))
+                    },
+                    bgColor = colors.bgCard
+                )
+                ActionButton(
+                    icon = if (watchlisted) "★" else "☆",
+                    label = if (watchlisted) "Saved" else "Watch",
+                    onClick = { viewModel.toggleWatchlist(ticker) },
+                    bgColor = if (watchlisted) colors.neutralBg else colors.bgCard,
+                    iconColor = if (watchlisted) colors.neutral else colors.textSecondary
+                )
+            }
+        }
+
+        // Time Filters
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
             ) {
                 timeFilters.forEachIndexed { index, filter ->
@@ -218,6 +329,7 @@ fun StockDetailScreen(
             }
         }
 
+        // Chart
         item {
             SparklineChart(
                 data = chartData,
@@ -229,6 +341,7 @@ fun StockDetailScreen(
             )
         }
 
+        // Your Position (if in portfolio)
         if (portfolioStock != null) {
             item {
                 SectionHeader(
@@ -264,6 +377,7 @@ fun StockDetailScreen(
             }
         }
 
+        // Key Stats
         item {
             SectionHeader(
                 title = "Key Stats",
@@ -289,6 +403,7 @@ fun StockDetailScreen(
             }
         }
 
+        // About
         item {
             SectionHeader(
                 title = "About",
@@ -314,6 +429,302 @@ fun StockDetailScreen(
 
         item {
             Spacer(modifier = Modifier.height(Spacing.xxl))
+        }
+    }
+}
+
+// --- Alert Dialog ---
+
+@Composable
+fun AlertDialogContent(
+    ticker: String,
+    companyName: String,
+    currentPrice: Double,
+    currencySymbol: String,
+    onDismiss: () -> Unit,
+    onConfirm: (AlertCondition, Double) -> Unit
+) {
+    val colors = StocksumTheme.colors
+    val typography = StocksumTheme.typography
+
+    var selectedCondition by remember { mutableIntStateOf(0) }
+    var targetPriceText by remember { mutableStateOf("%.2f".format(currentPrice)) }
+    val conditions = listOf("Above", "Below")
+
+    // Full-screen overlay dialog
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.bgBase.copy(alpha = 0.85f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = Spacing.xxl)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(Radius.xl))
+                .background(colors.bgCard)
+                .clickable(enabled = false, onClick = {}) // prevent dismiss on card click
+                .padding(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
+        ) {
+            BasicText(
+                text = "Set Alert for $ticker",
+                style = typography.title.copy(color = colors.textPrimary)
+            )
+            BasicText(
+                text = "Current: $currencySymbol${"%.2f".format(currentPrice)}",
+                style = typography.caption.copy(color = colors.textSecondary)
+            )
+
+            // Condition selector
+            BasicText(
+                text = "Condition",
+                style = typography.label.copy(color = colors.textSecondary)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                conditions.forEachIndexed { index, label ->
+                    val isSelected = index == selectedCondition
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.sm))
+                            .background(if (isSelected) colors.accentBg else colors.bgElevated)
+                            .clickable { selectedCondition = index }
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BasicText(
+                            text = label,
+                            style = typography.label.copy(
+                                color = if (isSelected) colors.accent else colors.textSecondary
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Target price
+            BasicText(
+                text = "Target Price ($currencySymbol)",
+                style = typography.label.copy(color = colors.textSecondary)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Radius.sm))
+                    .background(colors.bgInput)
+                    .padding(Spacing.md)
+            ) {
+                BasicTextField(
+                    value = targetPriceText,
+                    onValueChange = { targetPriceText = it },
+                    textStyle = typography.title.copy(color = colors.textPrimary),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(Radius.sm))
+                        .background(colors.bgElevated)
+                        .clickable(onClick = onDismiss)
+                        .padding(vertical = Spacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    BasicText(
+                        text = "Cancel",
+                        style = typography.label.copy(color = colors.textSecondary)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(Radius.sm))
+                        .background(colors.accent)
+                        .clickable {
+                            val price = targetPriceText.toDoubleOrNull()
+                            if (price != null && price > 0) {
+                                val condition = if (selectedCondition == 0) AlertCondition.ABOVE else AlertCondition.BELOW
+                                onConfirm(condition, price)
+                            }
+                        }
+                        .padding(vertical = Spacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    BasicText(
+                        text = "Set Alert",
+                        style = typography.label.copy(color = colors.bgBase)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// --- Portfolio Dialog ---
+
+@Composable
+fun PortfolioDialogContent(
+    ticker: String,
+    companyName: String,
+    currentPrice: Double,
+    currencySymbol: String,
+    isEditing: Boolean,
+    existingShares: Double,
+    existingPrice: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (Double, Double) -> Unit,
+    onRemove: (() -> Unit)?
+) {
+    val colors = StocksumTheme.colors
+    val typography = StocksumTheme.typography
+
+    var sharesText by remember { mutableStateOf(if (isEditing) "%.1f".format(existingShares) else "") }
+    var priceText by remember { mutableStateOf(if (isEditing) "%.2f".format(existingPrice) else "%.2f".format(currentPrice)) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.bgBase.copy(alpha = 0.85f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = Spacing.xxl)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(Radius.xl))
+                .background(colors.bgCard)
+                .clickable(enabled = false, onClick = {})
+                .padding(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
+        ) {
+            BasicText(
+                text = if (isEditing) "Edit $ticker Position" else "Add $ticker to Portfolio",
+                style = typography.title.copy(color = colors.textPrimary)
+            )
+            BasicText(
+                text = "Current price: $currencySymbol${"%.2f".format(currentPrice)}",
+                style = typography.caption.copy(color = colors.textSecondary)
+            )
+
+            // Shares input
+            BasicText(
+                text = "Number of Shares",
+                style = typography.label.copy(color = colors.textSecondary)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Radius.sm))
+                    .background(colors.bgInput)
+                    .padding(Spacing.md)
+            ) {
+                if (sharesText.isEmpty()) {
+                    BasicText(
+                        text = "e.g. 10",
+                        style = typography.body.copy(color = colors.textTertiary)
+                    )
+                }
+                BasicTextField(
+                    value = sharesText,
+                    onValueChange = { sharesText = it },
+                    textStyle = typography.title.copy(color = colors.textPrimary),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Purchase price input
+            BasicText(
+                text = "Average Purchase Price ($currencySymbol)",
+                style = typography.label.copy(color = colors.textSecondary)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Radius.sm))
+                    .background(colors.bgInput)
+                    .padding(Spacing.md)
+            ) {
+                BasicTextField(
+                    value = priceText,
+                    onValueChange = { priceText = it },
+                    textStyle = typography.title.copy(color = colors.textPrimary),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(Radius.sm))
+                        .background(colors.bgElevated)
+                        .clickable(onClick = onDismiss)
+                        .padding(vertical = Spacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    BasicText(
+                        text = "Cancel",
+                        style = typography.label.copy(color = colors.textSecondary)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(Radius.sm))
+                        .background(colors.gain)
+                        .clickable {
+                            val shares = sharesText.toDoubleOrNull()
+                            val price = priceText.toDoubleOrNull()
+                            if (shares != null && shares > 0 && price != null && price > 0) {
+                                onConfirm(shares, price)
+                            }
+                        }
+                        .padding(vertical = Spacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    BasicText(
+                        text = if (isEditing) "Update" else "Add",
+                        style = typography.label.copy(color = colors.bgBase)
+                    )
+                }
+            }
+
+            // Remove button (only when editing)
+            if (onRemove != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(Radius.sm))
+                        .background(colors.lossBg)
+                        .clickable(onClick = onRemove)
+                        .padding(vertical = Spacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    BasicText(
+                        text = "Remove from Portfolio",
+                        style = typography.label.copy(color = colors.loss)
+                    )
+                }
+            }
         }
     }
 }

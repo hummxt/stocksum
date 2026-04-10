@@ -79,6 +79,9 @@ dependencies {
     // Coil for SVG Logos
     implementation(libs.coil.compose)
     implementation(libs.coil.svg)
+    
+    // WorkManager for scheduled notifications
+    implementation(libs.androidx.work.runtime.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -35,7 +35,6 @@ import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
 import com.example.stocksum.ui.viewmodels.HomeViewModel
 import com.example.stocksum.ui.viewmodels.UiState
-import androidx.compose.runtime.remember
 
 @Composable
 fun HomeScreen(
@@ -48,20 +47,12 @@ fun HomeScreen(
     val typography = StocksumTheme.typography
 
     val stocksState by viewModel.homeStocks.collectAsState()
-    val loadedStocks = if (stocksState is UiState.Success) (stocksState as UiState.Success).data else emptyList()
-
-    val portfolioStocks = remember(loadedStocks) {
-        if (loadedStocks.isEmpty()) emptyList<com.example.stocksum.ui.MockStock>()
-        else loadedStocks.take(6).mapIndexed { index, stock ->
-            val shares = (index + 2) * 5.0
-            val purchasePrice = stock.currentPrice * (0.85 + (index * 0.05))
-            val pnlValue = (stock.currentPrice - purchasePrice) * shares
-            stock.copy(sharesOwned = shares, purchasePrice = purchasePrice, pnlValue = pnlValue)
-        }
-    }
+    val portfolioStocks by viewModel.portfolioStocks.collectAsState()
 
     val totalValue = portfolioStocks.sumOf { it.sharesOwned * it.currentPrice }
-    val todayChangeAmount = portfolioStocks.sumOf { it.sharesOwned * (it.currentPrice - (it.currentPrice / (1 + (it.changePercent / 100)))) }
+    val todayChangeAmount = portfolioStocks.sumOf {
+        it.sharesOwned * (it.currentPrice - (it.currentPrice / (1 + (it.changePercent / 100))))
+    }
     val oldTotalValue = totalValue - todayChangeAmount
     val todayPercent = if (oldTotalValue > 0) (todayChangeAmount / oldTotalValue) * 100 else 0.0
 
