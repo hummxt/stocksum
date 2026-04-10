@@ -1,6 +1,12 @@
 package com.example.stocksum.ui.screens
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -238,7 +244,7 @@ fun StockDetailScreen(
                     label = if (isInPortfolio) "Edit" else "Portfolio",
                     onClick = { showPortfolioDialog = true },
                     bgColor = colors.bgCard,
-                    iconColor = if (isInPortfolio) colors.gain else colors.textPrimary
+                    iconColor = colors.accent
                 )
                 ActionButton(
                     icon = Icons.Rounded.Share,
@@ -255,14 +261,14 @@ fun StockDetailScreen(
                         context.startActivity(Intent.createChooser(shareIntent, "Share ${stock.ticker}"))
                     },
                     bgColor = colors.bgCard,
-                    iconColor = colors.textPrimary
+                    iconColor = colors.accent
                 )
                 ActionButton(
                     icon = if (watchlisted) Icons.Rounded.Star else Icons.Rounded.StarOutline,
                     label = if (watchlisted) "Saved" else "Watch",
                     onClick = { viewModel.toggleWatchlist(ticker) },
                     bgColor = colors.bgCard,
-                    iconColor = if (watchlisted) colors.accent else colors.textSecondary
+                    iconColor = colors.accent
                 )
             }
         }
@@ -401,9 +407,14 @@ fun StockDetailScreen(
     }
     
     // Alert Dialog overlay
-    if (showAlertDialog) {
+    AnimatedVisibility(
+        visible = showAlertDialog,
+        enter = fadeIn(tween(durationMillis = 180)) + scaleIn(tween(durationMillis = 180), initialScale = 0.95f),
+        exit = fadeOut(tween(durationMillis = 150)) + scaleOut(tween(durationMillis = 150), targetScale = 0.95f)
+    ) {
         AlertDialogContent(
             ticker = ticker,
+            companyName = stock.companyName,
             currentPrice = stock.currentPrice,
             currencySymbol = stock.currencySymbol,
             onDismiss = { showAlertDialog = false },
@@ -415,7 +426,11 @@ fun StockDetailScreen(
     }
 
     // Portfolio Dialog overlay
-    if (showPortfolioDialog) {
+    AnimatedVisibility(
+        visible = showPortfolioDialog,
+        enter = fadeIn(tween(durationMillis = 180)) + scaleIn(tween(durationMillis = 180), initialScale = 0.95f),
+        exit = fadeOut(tween(durationMillis = 150)) + scaleOut(tween(durationMillis = 150), targetScale = 0.95f)
+    ) {
         PortfolioDialogContent(
             ticker = ticker,
             companyName = stock.companyName,
