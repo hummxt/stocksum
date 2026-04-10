@@ -108,48 +108,7 @@ fun StockDetailScreen(
         }
     }
 
-    // Alert Dialog
-    if (showAlertDialog) {
-        AlertDialogContent(
-            ticker = ticker,
-            companyName = stock.companyName,
-            currentPrice = stock.currentPrice,
-            currencySymbol = stock.currencySymbol,
-            onDismiss = { showAlertDialog = false },
-            onConfirm = { condition, targetPrice ->
-                viewModel.addAlert(ticker, stock.companyName, condition, targetPrice)
-                showAlertDialog = false
-            }
-        )
-    }
-
-    // Portfolio Dialog
-    if (showPortfolioDialog) {
-        PortfolioDialogContent(
-            ticker = ticker,
-            companyName = stock.companyName,
-            currentPrice = stock.currentPrice,
-            currencySymbol = stock.currencySymbol,
-            isEditing = isInPortfolio,
-            existingShares = portfolioStock?.sharesOwned ?: 0.0,
-            existingPrice = portfolioStock?.purchasePrice ?: stock.currentPrice,
-            onDismiss = { showPortfolioDialog = false },
-            onConfirm = { shares, price ->
-                if (isInPortfolio) {
-                    viewModel.updatePortfolioEntry(ticker, shares, price)
-                } else {
-                    viewModel.addToPortfolio(ticker, stock.companyName, shares, price)
-                }
-                showPortfolioDialog = false
-            },
-            onRemove = if (isInPortfolio) {
-                {
-                    viewModel.removeFromPortfolio(ticker)
-                    showPortfolioDialog = false
-                }
-            } else null
-        )
-    }
+    Box(modifier = Modifier.fillMaxSize()) {
 
     LazyColumn(
         modifier = Modifier
@@ -271,14 +230,14 @@ fun StockDetailScreen(
                     icon = Icons.Rounded.Notifications,
                     label = "Alert",
                     onClick = { showAlertDialog = true },
-                    bgColor = colors.accentBg,
+                    bgColor = colors.bgCard,
                     iconColor = colors.accent
                 )
                 ActionButton(
                     icon = if (isInPortfolio) Icons.Rounded.Check else Icons.Rounded.Folder,
                     label = if (isInPortfolio) "Edit" else "Portfolio",
                     onClick = { showPortfolioDialog = true },
-                    bgColor = if (isInPortfolio) colors.gainBg else colors.bgCard,
+                    bgColor = colors.bgCard,
                     iconColor = if (isInPortfolio) colors.gain else colors.textPrimary
                 )
                 ActionButton(
@@ -295,14 +254,15 @@ fun StockDetailScreen(
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "Share ${stock.ticker}"))
                     },
-                    bgColor = colors.bgCard
+                    bgColor = colors.bgCard,
+                    iconColor = colors.textPrimary
                 )
                 ActionButton(
                     icon = if (watchlisted) Icons.Rounded.Star else Icons.Rounded.StarOutline,
                     label = if (watchlisted) "Saved" else "Watch",
                     onClick = { viewModel.toggleWatchlist(ticker) },
-                    bgColor = if (watchlisted) colors.neutralBg else colors.bgCard,
-                    iconColor = if (watchlisted) colors.neutral else colors.textSecondary
+                    bgColor = colors.bgCard,
+                    iconColor = if (watchlisted) colors.accent else colors.textSecondary
                 )
             }
         }
@@ -438,6 +398,49 @@ fun StockDetailScreen(
         item {
             Spacer(modifier = Modifier.height(Spacing.xxl))
         }
+    }
+    
+    // Alert Dialog overlay
+    if (showAlertDialog) {
+        AlertDialogContent(
+            ticker = ticker,
+            currentPrice = stock.currentPrice,
+            currencySymbol = stock.currencySymbol,
+            onDismiss = { showAlertDialog = false },
+            onConfirm = { condition, targetPrice ->
+                viewModel.addAlert(ticker, stock.companyName, condition, targetPrice)
+                showAlertDialog = false
+            }
+        )
+    }
+
+    // Portfolio Dialog overlay
+    if (showPortfolioDialog) {
+        PortfolioDialogContent(
+            ticker = ticker,
+            companyName = stock.companyName,
+            currentPrice = stock.currentPrice,
+            currencySymbol = stock.currencySymbol,
+            isEditing = isInPortfolio,
+            existingShares = portfolioStock?.sharesOwned ?: 0.0,
+            existingPrice = portfolioStock?.purchasePrice ?: stock.currentPrice,
+            onDismiss = { showPortfolioDialog = false },
+            onConfirm = { shares, price ->
+                if (isInPortfolio) {
+                    viewModel.updatePortfolioEntry(ticker, shares, price)
+                } else {
+                    viewModel.addToPortfolio(ticker, stock.companyName, shares, price)
+                }
+                showPortfolioDialog = false
+            },
+            onRemove = if (isInPortfolio) {
+                {
+                    viewModel.removeFromPortfolio(ticker)
+                    showPortfolioDialog = false
+                }
+            } else null
+        )
+    }
     }
 }
 

@@ -69,16 +69,7 @@ fun AlertsScreen(
         }
     }
 
-    // Create alert dialog
-    if (showCreateDialog) {
-        QuickAlertDialog(
-            onDismiss = { showCreateDialog = false },
-            onConfirm = { ticker, condition, targetPrice ->
-                viewModel.addAlert(ticker, "", condition, targetPrice)
-                showCreateDialog = false
-            }
-        )
-    }
+    Box(modifier = Modifier.fillMaxSize()) {
 
     LazyColumn(
         modifier = Modifier
@@ -261,6 +252,18 @@ fun AlertsScreen(
                 }
             }
         }
+    }
+    
+    // Create alert dialog
+    if (showCreateDialog) {
+        QuickAlertDialog(
+            onDismiss = { showCreateDialog = false },
+            onConfirm = { ticker, condition, targetPrice ->
+                viewModel.addAlert(ticker, "", condition, targetPrice)
+                showCreateDialog = false
+            }
+        )
+    }
     }
 }
 
