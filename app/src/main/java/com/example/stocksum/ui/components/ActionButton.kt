@@ -1,5 +1,7 @@
 package com.example.stocksum.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,10 +36,15 @@ fun ActionButton(
     val colors = StocksumTheme.colors
     val typography = StocksumTheme.typography
 
+    val targetIconColor = iconColor ?: colors.accent
+    val targetLabelColor = iconColor ?: colors.textSecondary
+    val animatedIconColor by animateColorAsState(targetIconColor)
+    val animatedLabelColor by animateColorAsState(targetLabelColor)
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        modifier = modifier
+        modifier = modifier.animateContentSize()
     ) {
         Box(
             modifier = Modifier
@@ -49,14 +57,14 @@ fun ActionButton(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = iconColor ?: colors.accent,
+                tint = animatedIconColor,
                 modifier = Modifier.size(24.dp)
             )
         }
         BasicText(
             text = label,
             style = typography.caption.copy(
-                color = colors.textSecondary,
+                color = animatedLabelColor,
                 textAlign = TextAlign.Center
             )
         )
