@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -34,6 +35,7 @@ import com.example.stocksum.ui.components.StocksumTextField
 import com.example.stocksum.ui.theme.Radius
 import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
+import com.example.stocksum.ui.utils.InfiniteScrollHandler
 import com.example.stocksum.ui.viewmodels.HomeViewModel
 import com.example.stocksum.ui.viewmodels.UiState
 
@@ -52,8 +54,10 @@ fun DiscoverScreen(
     val homeStocksState by viewModel.homeStocks.collectAsState()
 
     val sections = listOf("Market View", "Gainers", "Losers", "Active")
+    val lazyListState = rememberLazyListState()
 
     LazyColumn(
+        state = lazyListState,
         modifier = Modifier
             .fillMaxSize()
             .background(colors.bgBase),
@@ -197,4 +201,15 @@ fun DiscoverScreen(
             }
         }
     }
+
+    // Infinite scroll handler for search results and market view
+    val displayedStocks = when {
+        searchQuery.isNotEmpty() -> (searchState as? UiState.Success)?.data ?: emptyList()
+        else -> (homeStocksState as? UiState.Success)?.data ?: emptyList()
+    }
+    InfiniteScrollHandler(
+        lazyListState = lazyListState,
+        itemCount = displayedStocks.size,
+        onLoadMore = { viewModel.loadMoreStocks() }
+    )
 }
