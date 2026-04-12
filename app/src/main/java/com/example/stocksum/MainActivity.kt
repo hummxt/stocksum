@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import kotlinx.coroutines.delay
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -36,6 +39,7 @@ import com.example.stocksum.ui.components.NavTab
 import com.example.stocksum.ui.components.StocksumFAB
 import com.example.stocksum.ui.navigation.AppNavigation
 import com.example.stocksum.ui.navigation.Screen
+import com.example.stocksum.ui.screens.SplashScreen
 import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
 import com.example.stocksum.ui.theme.ThemeMode
@@ -53,6 +57,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val splashScreen = installSplashScreen()
         
         val imageLoader = ImageLoader.Builder(this)
             .components {
@@ -87,12 +93,24 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
-            
+            var showSplash by remember { mutableStateOf(true) }
+
             StocksumTheme(themeMode = themeMode) {
-                StocksumApp(
-                    currentTheme = themeMode,
-                    onThemeChange = { themeMode = it }
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (showSplash) {
+                        SplashScreen(modifier = Modifier.fillMaxSize())
+                    } else {
+                        StocksumApp(
+                            currentTheme = themeMode,
+                            onThemeChange = { themeMode = it }
+                        )
+                    }
+                }
+
+                LaunchedEffect(Unit) {
+                    delay(1800)
+                    showSplash = false
+                }
             }
         }
     }
