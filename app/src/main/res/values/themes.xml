@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Your main App theme -->
+    <style name="Theme.Stocksum" parent="Theme.Material3.DayNight">
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+        <!-- Material3 uses different color attributes -->
+        <!-- <item name="colorPrimary">@color/purple_500</item> -->
+    </style>
 
-    <style name="Theme.Stocksum" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- THIS IS THE MISSING STYLE CAUSING YOUR ERROR -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Background color of the splash screen -->
+        <item name="windowSplashScreenBackground">#FFFFFF</item>
+
+        <!-- The icon to display. Using your existing launcher icon -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+
+        <!-- The theme to switch to AFTER the splash screen finishes -->
+        <item name="postSplashScreenTheme">@style/Theme.Stocksum</item>
+    </style>
 </resources>
