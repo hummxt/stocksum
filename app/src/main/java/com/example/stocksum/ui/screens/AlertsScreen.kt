@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.stocksum.data.AlertCondition
@@ -44,6 +45,9 @@ import com.example.stocksum.ui.components.AlertStatus
 import com.example.stocksum.ui.theme.Radius
 import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
+import com.example.stocksum.ui.utils.ToastMessages
+import com.example.stocksum.ui.utils.ToastType
+import com.example.stocksum.ui.utils.showToast
 import com.example.stocksum.ui.viewmodels.HomeViewModel
 
 @Composable
@@ -51,6 +55,7 @@ fun AlertsScreen(
     viewModel: HomeViewModel,
     onStockClick: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val colors = StocksumTheme.colors
     val typography = StocksumTheme.typography
 
@@ -227,7 +232,10 @@ fun AlertsScreen(
                                     .size(28.dp)
                                     .clip(CircleShape)
                                     .background(colors.lossBg)
-                                    .clickable { viewModel.removeAlert(alert.id) },
+                                    .clickable {
+                                        viewModel.removeAlert(alert.id)
+                                        context.showToast(ToastMessages.alertDeleted(alert.ticker), ToastType.SUCCESS)
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
