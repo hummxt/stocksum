@@ -48,6 +48,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import com.example.stocksum.ui.utils.ToastMessages
+import com.example.stocksum.ui.utils.ToastType
+import com.example.stocksum.ui.utils.showToast
 import androidx.compose.ui.unit.dp
 import com.example.stocksum.data.AlertCondition
 import com.example.stocksum.ui.MockData
@@ -420,6 +423,7 @@ fun StockDetailScreen(
             onDismiss = { showAlertDialog = false },
             onConfirm = { condition, targetPrice ->
                 viewModel.addAlert(ticker, stock.companyName, condition, targetPrice)
+                context.showToast(ToastMessages.alertCreated(ticker, targetPrice), ToastType.SUCCESS)
                 showAlertDialog = false
             }
         )
@@ -443,14 +447,17 @@ fun StockDetailScreen(
             onConfirm = { shares, price ->
                 if (isInPortfolio) {
                     viewModel.updatePortfolioEntry(ticker, shares, price)
+                    context.showToast("✓ Updated $ticker", ToastType.SUCCESS)
                 } else {
                     viewModel.addToPortfolio(ticker, stock.companyName, shares, price)
+                    context.showToast(ToastMessages.addedToPortfolio(ticker), ToastType.SUCCESS)
                 }
                 showPortfolioDialog = false
             },
             onRemove = if (isInPortfolio) {
                 {
                     viewModel.removeFromPortfolio(ticker)
+                    context.showToast(ToastMessages.removedFromPortfolio(ticker), ToastType.SUCCESS)
                     showPortfolioDialog = false
                 }
             } else null
