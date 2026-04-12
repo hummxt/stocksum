@@ -30,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.stocksum.data.NotificationHelper
+import com.example.stocksum.data.NotificationScheduler
 import com.example.stocksum.ui.components.BottomNavBar
 import com.example.stocksum.ui.components.NavTab
 import com.example.stocksum.ui.components.StocksumFAB
@@ -39,6 +40,7 @@ import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
 import com.example.stocksum.ui.theme.ThemeMode
 import com.example.stocksum.ui.viewmodels.HomeViewModel
+import com.example.stocksum.ui.viewmodels.StreakViewModel
 import coil.Coil
 import coil.ImageLoader
 import coil.decode.SvgDecoder
@@ -62,6 +64,15 @@ class MainActivity : ComponentActivity() {
         // Create notification channels
         val notificationHelper = NotificationHelper(this)
         notificationHelper.createNotificationChannels()
+        
+        // Schedule market notifications (9:30 AM & 4:00 PM)
+        val notificationScheduler = NotificationScheduler(this)
+        notificationScheduler.scheduleMarketNotifications()
+        
+        // Initialize streak tracking on app open
+        val sharedPrefs = getSharedPreferences("stocksum_prefs", MODE_PRIVATE)
+        val streakViewModel = StreakViewModel(sharedPrefs)
+        streakViewModel.updateStreakOnAppOpen()
         
         // Request notification permission on Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
