@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -22,6 +23,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import com.example.stocksum.ui.MockData
 import com.example.stocksum.ui.components.MarketMoodBar
 import com.example.stocksum.ui.components.MarketMoverChip
@@ -30,11 +33,14 @@ import com.example.stocksum.ui.components.SectionHeader
 import com.example.stocksum.ui.components.SkeletonHeroCard
 import com.example.stocksum.ui.components.SkeletonStockRow
 import com.example.stocksum.ui.components.StockRow
+import com.example.stocksum.ui.components.StreakBadge
 import com.example.stocksum.ui.theme.Radius
 import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
+import com.example.stocksum.ui.utils.InfiniteScrollHandler
 import com.example.stocksum.ui.viewmodels.HomeViewModel
 import com.example.stocksum.ui.viewmodels.UiState
+import com.example.stocksum.ui.viewmodels.StreakViewModel
 
 @Composable
 fun HomeScreen(
@@ -43,11 +49,17 @@ fun HomeScreen(
     onSeeAllHoldings: () -> Unit = {},
     onSeeAllMovers: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val colors = StocksumTheme.colors
     val typography = StocksumTheme.typography
 
     val stocksState by viewModel.homeStocks.collectAsState()
     val portfolioStocks by viewModel.portfolioStocks.collectAsState()
+    
+    // Get streak data
+    val sharedPrefs = context.getSharedPreferences("stocksum_prefs", Context.MODE_PRIVATE)
+    val streakViewModel = StreakViewModel(sharedPrefs)
+    val streakData by streakViewModel.streakData.collectAsState()
 
     val totalValue = portfolioStocks.sumOf { it.sharesOwned * it.currentPrice }
     val todayChangeAmount = portfolioStocks.sumOf {
@@ -64,7 +76,10 @@ fun HomeScreen(
         ((50 + averageChange * 2).coerceIn(0.0, 100.0)).toInt()
     }
 
+    val lazyListState = rememberLazyListState()
+
     LazyColumn(
+        state = lazyListState,
         modifier = Modifier
             .fillMaxSize()
             .background(colors.bgBase),
@@ -100,6 +115,17 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+
+        item {
+            StreakBadge(
+                streak = streakData.currentStreak,
+                bestStreak = streakData.bestStreak,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.screenHorizontal)
+                    .padding(vertical = Spacing.md)
+            )
         }
 
         item {
@@ -220,4 +246,11 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(Spacing.xxl))
         }
     }
+
+    // Infinite scroll handler - loads more stocks when scrolled near bottom
+    InfiniteScrollHandler(
+        lazyListState = lazyListState,
+        itemCount = stocks.size,
+        onLoadMore = { viewModel.loadMoreStocks() }
+    )
 }
