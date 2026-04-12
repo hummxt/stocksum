@@ -1,5 +1,6 @@
 package com.example.stocksum.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,12 +33,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.stocksum.ui.MockData
 import com.example.stocksum.ui.MockStock
 import com.example.stocksum.ui.components.SparklineChart
 import com.example.stocksum.ui.components.StockRow
 import com.example.stocksum.ui.components.PortfolioHeroCard
+import com.example.stocksum.ui.onboarding.DemoPortfolioView
+import com.example.stocksum.ui.onboarding.OnboardingManager
+import com.example.stocksum.ui.onboarding.OnboardingTutorial
 import com.example.stocksum.ui.theme.Radius
 import com.example.stocksum.ui.theme.Spacing
 import com.example.stocksum.ui.theme.StocksumTheme
@@ -48,13 +53,37 @@ fun PortfolioScreen(
     viewModel: HomeViewModel,
     onStockClick: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val colors = StocksumTheme.colors
     val typography = StocksumTheme.typography
+    
+    // Onboarding management
+    val onboardingManager = remember { OnboardingManager(context) }
+    var showOnboarding by remember { mutableStateOf(false) }
+    var showDemoPortfolio by remember { mutableStateOf(false) }
+    
+    val portfolioStocks by viewModel.portfolioStocks.collectAsState()
     var selectedTimeFilter by remember { mutableIntStateOf(1) }
     val timeFilters = listOf("1D", "1W", "1M", "3M", "1Y")
-
-    val portfolioStocks by viewModel.portfolioStocks.collectAsState()
     var isEditMode by remember { mutableStateOf(false) }
+    
+    // Show onboarding on first launch if portfolio is empty
+    if (portfolioStocks.isEmpty() && !onboardingManager.isOnboardingDismissed() && !showDemoPortfolio) {
+        showOnboarding = true
+    } else {
+        showOnboarding = false
+    }
+
+    // If demo is active, show demo portfolio
+    if (showDemoPortfolio) {
+        DemoPortfolioView(
+            onDemoComplete = {
+                showDemoPortfolio = false
+                onboardingManager.dismissOnboarding()
+            }
+        )
+        return
+    }
 
     val totalValue = portfolioStocks.sumOf { it.sharesOwned * it.currentPrice }
     val totalGain = portfolioStocks.sumOf { it.pnlValue }
@@ -117,41 +146,68 @@ fun PortfolioScreen(
         }
 
         if (portfolioStocks.isEmpty()) {
-            // Empty state
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = Spacing.xxl + Spacing.xxl),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
-                ) {
-                    Box(
+            // Show onboarding tutorial first
+            if (showOnboarding) {
+                item {
+                    Column(
                         modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape)
-                            .background(colors.accentBg),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.screenHorizontal)
+                            .padding(vertical = Spacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Folder,
-                            contentDescription = "Portfolio",
-                            tint = colors.accent,
-                            modifier = Modifier.size(32.dp)
+                        OnboardingTutorial(
+                            onDismiss = {
+                                onboardingManager.dismissOnboarding()
+                                showOnboarding = false
+                            },
+                            onTryDemo = {
+                                showDemoPortfolio = true
+                            },
+                            onSkip = {
+                                onboardingManager.dismissOnboarding()
+                                showOnboarding = false
+                            }
                         )
                     }
-                    BasicText(
-                        text = "No stocks yet",
-                        style = typography.title.copy(color = colors.textPrimary)
-                    )
-                    BasicText(
-                        text = "Add stocks from the stock detail screen",
-                        style = typography.caption.copy(color = colors.textSecondary)
-                    )
-                    BasicText(
-                        text = "Tap any stock → Portfolio button",
-                        style = typography.caption.copy(color = colors.textTertiary)
-                    )
+                }
+            } else {
+                // Empty state
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = Spacing.xxl + Spacing.xxl),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(colors.accentBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Folder,
+                                contentDescription = "Portfolio",
+                                tint = colors.accent,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        BasicText(
+                            text = "No stocks yet",
+                            style = typography.title.copy(color = colors.textPrimary)
+                        )
+                        BasicText(
+                            text = "Add stocks from the stock detail screen",
+                            style = typography.caption.copy(color = colors.textSecondary)
+                        )
+                        BasicText(
+                            text = "Tap any stock → Portfolio button",
+                            style = typography.caption.copy(color = colors.textTertiary)
+                        )
+                    }
                 }
             }
         } else {
